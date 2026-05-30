@@ -1,6 +1,6 @@
 # Cafetería App — API REST
 
-Proyecto individual desarrollado para el curso. API REST para la gestión de una cafetería: productos y ventas.
+Proyecto individual desarrollado. API REST para la gestión de una cafetería: productos y ventas.
 
 ## Stack tecnológico
 
