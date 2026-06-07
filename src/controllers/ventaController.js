@@ -1,4 +1,4 @@
-const { Venta, LineaVenta, Producto } = require('../models');
+const { Venta, LineaVenta, Producto, sequelize } = require('../models');
 
 exports.getAll = async (req, res) => {
   const ventas = await Venta.findAll({ include: LineaVenta });
@@ -14,29 +14,51 @@ exports.getOne = async (req, res) => {
 };
 
 exports.create = async (req, res) => {
+  const t = await sequelize.transaction();
   try {
     const { lineas } = req.body;
+
+    if (!lineas || !lineas.length)
+      return res.status(400).json({ error: 'Se requiere al menos una línea' });
+
+    const venta = await Venta.create({ total: 0 }, { transaction: t });
     let total = 0;
-    const venta = await Venta.create({ total: 0 });
 
     for (const linea of lineas) {
-      const producto = await Producto.findByPk(linea.ProductoId);
-      if (!producto) throw new Error(`Producto ${linea.ProductoId} no existe`);
+      const producto = await Producto.findByPk(linea.ProductoId, { transaction: t });
+
+      if (!producto || !producto.activo)
+        throw { status: 404, msg: `Producto ${linea.ProductoId} no encontrado` };
+
+      if (producto.stock < linea.cantidad)
+        throw { status: 409, msg: `Stock insuficiente para "${producto.nombre}". Disponible: ${producto.stock}` };
+
       const subtotal = producto.precio * linea.cantidad;
       total += subtotal;
+
       await LineaVenta.create({
-        VentaId: venta.id,
-        ProductoId: linea.ProductoId,
-        cantidad: linea.cantidad,
+        VentaId:         venta.id,
+        ProductoId:      linea.ProductoId,
+        cantidad:        linea.cantidad,
         precio_unitario: producto.precio,
         subtotal,
-      });
+      }, { transaction: t });
+
+      await producto.update(
+        { stock: producto.stock - linea.cantidad },
+        { transaction: t }
+      );
     }
 
-    await venta.update({ total });
-    res.status(201).json(await Venta.findByPk(venta.id, { include: LineaVenta }));
+    await venta.update({ total }, { transaction: t });
+    await t.commit();
+
+    res.status(201).json(
+      await Venta.findByPk(venta.id, { include: LineaVenta })
+    );
   } catch (e) {
-    res.status(400).json({ error: e.message });
+    await t.rollback();
+    res.status(e.status || 400).json({ error: e.msg || e.message });
   }
 };
 
