@@ -1,2 +1,18 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# Dependencias
+node_modules/
+
+# Variables de entorno (¡NUNCA subir esto a GitHub!)
+.env
+
+# Builds del frontend
+client/dist/
+client/build/
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+

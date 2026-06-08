@@ -10,6 +10,7 @@ app.use(express.json());
 app.use('/api/auth',      require('./routes/auth'));
 app.use('/api/productos', require('./routes/productos'));
 app.use('/api/ventas',    auth, require('./routes/ventas'));
+app.use('/api/dashboard', require('./routes/dashboard'));
 
 app.get('/', (req, res) => {
   res.json({ mensaje: 'Bienvenido a Cafetería API' });

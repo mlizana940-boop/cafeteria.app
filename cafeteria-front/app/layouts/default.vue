@@ -14,6 +14,10 @@
           <span class="nav-icon">🛒</span>
           <span>Mostrador</span>
         </NuxtLink>
+        <NuxtLink to="/" class="nav-link">
+        <span class="nav-icon">📊</span>
+        <span>Introducción</span>
+        </NuxtLink>
       </div>
       <button class="logout-btn" @click="logout">
         <span>⎋</span> Cerrar sesión
