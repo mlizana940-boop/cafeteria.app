@@ -10,7 +10,7 @@ module.exports = (sequelize, DataTypes) => {
 
   Venta.init({
     total:  { type: DataTypes.DECIMAL(10, 2), allowNull: false },
-    estado: { type: DataTypes.ENUM('pendiente','completada','cancelada'), defaultValue: 'pendiente' },
+    estado: { type: DataTypes.ENUM('pendiente','completada','cancelada'), defaultValue: 'completada' },
     fecha:  { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   }, {
     sequelize,

@@ -1,7 +1,10 @@
 const { Venta, LineaVenta, Producto, sequelize } = require('../models');
 
 exports.getAll = async (req, res) => {
-  const ventas = await Venta.findAll({ include: LineaVenta });
+  const ventas = await Venta.findAll({
+    include: [{ model: LineaVenta, include: [Producto] }],
+    order: [['createdAt', 'DESC']],
+  });
   res.json(ventas);
 };
 
@@ -54,7 +57,7 @@ exports.create = async (req, res) => {
     await t.commit();
 
     res.status(201).json(
-      await Venta.findByPk(venta.id, { include: LineaVenta })
+      await Venta.findByPk(venta.id, { include: [{ model: LineaVenta, include: [Producto] }] })
     );
   } catch (e) {
     await t.rollback();
@@ -65,6 +68,40 @@ exports.create = async (req, res) => {
 exports.updateEstado = async (req, res) => {
   const venta = await Venta.findByPk(req.params.id);
   if (!venta) return res.status(404).json({ error: 'No encontrada' });
+  const estadosValidos = ['pendiente', 'completada', 'cancelada'];
+  if (!estadosValidos.includes(req.body.estado))
+    return res.status(400).json({ error: 'Estado no válido' });
   await venta.update({ estado: req.body.estado });
   res.json(venta);
+};
+
+exports.remove = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const venta = await Venta.findByPk(req.params.id, {
+      include: [LineaVenta],
+      transaction: t,
+    });
+    if (!venta) return res.status(404).json({ error: 'No encontrada' });
+
+    // Restaurar stock de cada producto
+    for (const linea of venta.LineaVenta) {
+      const producto = await Producto.findByPk(linea.ProductoId, { transaction: t });
+      if (producto) {
+        await producto.update(
+          { stock: producto.stock + linea.cantidad },
+          { transaction: t }
+        );
+      }
+    }
+
+    await LineaVenta.destroy({ where: { VentaId: venta.id }, transaction: t });
+    await venta.destroy({ transaction: t });
+    await t.commit();
+
+    res.json({ mensaje: 'Venta eliminada y stock restaurado' });
+  } catch (e) {
+    await t.rollback();
+    res.status(500).json({ error: e.message });
+  }
 };

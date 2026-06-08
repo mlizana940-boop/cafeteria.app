@@ -1,93 +1,280 @@
 <template>
-  <div class="ventas-layout">
-    <div class="catalogo-panel">
-      <div class="page-header">
-        <div>
-          <h1 class="page-title">Mostrador</h1>
-          <p class="page-subtitle">Selecciona productos para la venta</p>
+  <div>
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab" :class="{ active: tab === 'mostrador' }" @click="tab = 'mostrador'">
+        🛒 Mostrador
+      </button>
+      <button class="tab" :class="{ active: tab === 'historial' }" @click="tab = 'historial'; cargarHistorial()">
+        📋 Historial de ventas
+      </button>
+    </div>
+
+    <!-- ────────────────── MOSTRADOR ────────────────── -->
+    <div v-if="tab === 'mostrador'" class="ventas-layout">
+      <div class="catalogo-panel">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Mostrador</h1>
+            <p class="page-subtitle">Selecciona productos para la venta</p>
+          </div>
+        </div>
+        <input v-model="busqueda" class="input search-input" placeholder="🔍  Buscar producto..." />
+        <div class="categorias-tabs">
+          <button v-for="cat in categorias" :key="cat.value" class="cat-tab"
+            :class="{ active: filtro === cat.value }" @click="filtro = cat.value">
+            {{ cat.label }}
+          </button>
+        </div>
+        <div class="productos-catalogo">
+          <button v-for="p in productosFiltrados" :key="p.id" class="producto-btn"
+            :class="{ agotado: p.stock === 0 }" :disabled="p.stock === 0" @click="agregar(p)">
+            <span class="prod-emoji">{{ catEmoji(p.categoria) }}</span>
+            <span class="prod-nombre">{{ p.nombre }}</span>
+            <span class="prod-precio">${{ Number(p.precio).toLocaleString() }}</span>
+            <span class="prod-stock" :class="p.stock === 0 ? 'agot' : ''">
+              {{ p.stock === 0 ? 'Agotado' : 'Stock: ' + p.stock }}
+            </span>
+          </button>
         </div>
       </div>
-      <input v-model="busqueda" class="input search-input" placeholder="🔍  Buscar producto..." />
-      <div class="categorias-tabs">
-        <button v-for="cat in categorias" :key="cat.value" class="cat-tab" :class="{ active: filtro === cat.value }" @click="filtro = cat.value">{{ cat.label }}</button>
-      </div>
-      <div class="productos-catalogo">
-        <button v-for="p in productosFiltrados" :key="p.id" class="producto-btn" :class="{ agotado: p.stock === 0 }" :disabled="p.stock === 0" @click="agregar(p)">
-          <span class="prod-emoji">{{ catEmoji(p.categoria) }}</span>
-          <span class="prod-nombre">{{ p.nombre }}</span>
-          <span class="prod-precio">${{ Number(p.precio).toLocaleString() }}</span>
-          <span class="prod-stock" :class="p.stock === 0 ? 'agot' : ''">{{ p.stock === 0 ? 'Agotado' : 'Stock: ' + p.stock }}</span>
+
+      <div class="carrito-panel">
+        <div class="carrito-header">
+          <h2>🛒 Carrito</h2>
+          <span class="carrito-count">{{ carrito.length }} items</span>
+        </div>
+        <div class="carrito-items">
+          <p v-if="!carrito.length" class="carrito-empty">Sin productos aún</p>
+          <div v-for="(item, i) in carrito" :key="i" class="carrito-item">
+            <div class="item-info">
+              <span class="item-emoji">{{ catEmoji(item.categoria) }}</span>
+              <span class="item-nombre">{{ item.nombre }}</span>
+            </div>
+            <div class="item-controles">
+              <button class="qty-btn" @click="decrementar(i)">−</button>
+              <span class="qty-num">{{ item.cantidad }}</span>
+              <button class="qty-btn" @click="item.cantidad++">+</button>
+            </div>
+            <div class="item-subtotal">${{ (item.precio * item.cantidad).toLocaleString() }}</div>
+            <button class="quitar-btn" @click="carrito.splice(i, 1)">✕</button>
+          </div>
+        </div>
+        <div class="carrito-total">
+          <div class="total-row destacado">
+            <span>Total</span>
+            <span class="total-monto">${{ total }}</span>
+          </div>
+        </div>
+        <div v-if="errorVenta" class="alert alert-error">{{ errorVenta }}</div>
+        <div v-if="exito" class="alert alert-success">{{ exito }}</div>
+        <button class="btn btn-primary confirmar-btn" :disabled="!carrito.length || loading" @click="confirmar">
+          {{ loading ? 'Procesando...' : '✓ Confirmar venta' }}
+        </button>
+        <button v-if="carrito.length" class="btn btn-ghost limpiar-btn" @click="carrito = []">
+          Limpiar carrito
         </button>
       </div>
     </div>
-    <div class="carrito-panel">
-      <div class="carrito-header">
-        <h2>🛒 Carrito</h2>
-        <span class="carrito-count">{{ carrito.length }} items</span>
+
+    <!-- ────────────────── HISTORIAL ────────────────── -->
+    <div v-if="tab === 'historial'">
+      <div class="page-header" style="margin-top:20px">
+        <div>
+          <h1 class="page-title">Historial de ventas</h1>
+          <p class="page-subtitle">Consulta, edita y elimina ventas registradas</p>
+        </div>
+        <button class="btn btn-ghost" @click="cargarHistorial">🔄 Actualizar</button>
       </div>
-      <div class="carrito-items">
-        <p v-if="!carrito.length" class="carrito-empty">Sin productos aún</p>
-        <div v-for="(item, i) in carrito" :key="i" class="carrito-item">
-          <div class="item-info">
-            <span class="item-emoji">{{ catEmoji(item.categoria) }}</span>
-            <span class="item-nombre">{{ item.nombre }}</span>
+
+      <!-- Filtro por estado -->
+      <div class="filters">
+        <button v-for="e in estados" :key="e.value" class="filter-btn"
+          :class="{ active: filtroEstado === e.value }" @click="filtroEstado = e.value">
+          {{ e.label }}
+        </button>
+      </div>
+
+      <div v-if="loadingHistorial" class="empty-state"><span>⏳</span><p>Cargando ventas...</p></div>
+
+      <div v-else-if="ventasFiltradas.length === 0" class="empty-state">
+        <span>📭</span><p>No hay ventas en este estado</p>
+      </div>
+
+      <div v-else class="historial-list">
+        <div v-for="v in ventasFiltradas" :key="v.id" class="venta-card">
+          <div class="venta-header">
+            <div class="venta-id">#{{ v.id }}</div>
+            <span class="badge" :class="badgeClass(v.estado)">{{ v.estado }}</span>
+            <div class="venta-fecha">{{ formatDate(v.createdAt) }}</div>
+            <div class="venta-total">${{ Number(v.total).toLocaleString() }}</div>
           </div>
-          <div class="item-controles">
-            <button class="qty-btn" @click="decrementar(i)">−</button>
-            <span class="qty-num">{{ item.cantidad }}</span>
-            <button class="qty-btn" @click="item.cantidad++">+</button>
+
+          <!-- Líneas de la venta -->
+          <div v-if="v.LineaVenta && v.LineaVenta.length" class="lineas">
+            <div v-for="l in v.LineaVenta" :key="l.id" class="linea">
+              <span class="linea-nombre">{{ l.Producto?.nombre || 'Producto eliminado' }}</span>
+              <span class="linea-qty">x{{ l.cantidad }}</span>
+              <span class="linea-subtotal">${{ Number(l.subtotal).toLocaleString() }}</span>
+            </div>
           </div>
-          <div class="item-subtotal">${{ (item.precio * item.cantidad).toLocaleString() }}</div>
-          <button class="quitar-btn" @click="carrito.splice(i, 1)">✕</button>
+
+          <!-- Acciones -->
+          <div class="venta-actions">
+            <div class="estado-select-wrap">
+              <label>Estado:</label>
+              <select class="input input-sm" :value="v.estado" @change="cambiarEstado(v, $event.target.value)">
+                <option value="pendiente">⏳ Pendiente</option>
+                <option value="completada">✅ Completada</option>
+                <option value="cancelada">❌ Cancelada</option>
+              </select>
+            </div>
+            <button class="btn btn-danger btn-sm" @click="eliminarVenta(v.id)">🗑 Eliminar</button>
+          </div>
         </div>
       </div>
-      <div class="carrito-total">
-        <div class="total-row destacado">
-          <span>Total</span>
-          <span class="total-monto">${{ total }}</span>
-        </div>
-      </div>
-      <div v-if="error" class="alert alert-error">{{ error }}</div>
-      <div v-if="exito" class="alert alert-success">{{ exito }}</div>
-      <button class="btn btn-primary confirmar-btn" :disabled="!carrito.length || loading" @click="confirmar">
-        {{ loading ? 'Procesando...' : '✓ Confirmar venta' }}
-      </button>
-      <button v-if="carrito.length" class="btn btn-ghost limpiar-btn" @click="carrito = []">Limpiar carrito</button>
     </div>
   </div>
 </template>
 
 <script setup>
 const { apiFetch } = useApi()
-const productos = ref([]); const carrito = ref([]); const error = ref(''); const exito = ref(''); const loading = ref(false); const busqueda = ref(''); const filtro = ref('todos')
-const categorias = [{ value:'todos', label:'Todos' },{ value:'bebida', label:'☕ Bebidas' },{ value:'comida', label:'🥪 Comidas' },{ value:'postre', label:'🧁 Postres' }]
-const catEmoji = (cat) => ({ bebida:'☕', comida:'🥪', postre:'🧁', otro:'📦' }[cat] || '📦')
+
+// ── Tab ──
+const tab = ref('mostrador')
+
+// ── Mostrador ──
+const productos   = ref([])
+const carrito     = ref([])
+const errorVenta  = ref('')
+const exito       = ref('')
+const loading     = ref(false)
+const busqueda    = ref('')
+const filtro      = ref('todos')
+
+const categorias = [
+  { value: 'todos',   label: 'Todos'       },
+  { value: 'bebida',  label: '☕ Bebidas'  },
+  { value: 'comida',  label: '🥪 Comidas'  },
+  { value: 'postre',  label: '🧁 Postres'  },
+]
+const catEmoji = (cat) => ({ bebida: '☕', comida: '🥪', postre: '🧁', otro: '📦' }[cat] || '📦')
+
 const productosFiltrados = computed(() => {
   let lista = productos.value
   if (filtro.value !== 'todos') lista = lista.filter(p => p.categoria === filtro.value)
   if (busqueda.value) lista = lista.filter(p => p.nombre.toLowerCase().includes(busqueda.value.toLowerCase()))
   return lista
 })
-const total = computed(() => carrito.value.reduce((s, i) => s + i.precio * i.cantidad, 0).toLocaleString())
-onMounted(() => { if (!localStorage.getItem('token')) navigateTo('/login'); cargar() })
+
+const total = computed(() =>
+  carrito.value.reduce((s, i) => s + i.precio * i.cantidad, 0).toLocaleString()
+)
+
+onMounted(() => {
+  if (!localStorage.getItem('token')) navigateTo('/login')
+  cargar()
+})
+
 const cargar = async () => { productos.value = await apiFetch('/productos') }
+
 const agregar = (p) => {
   const existe = carrito.value.find(i => i.ProductoId === p.id)
-  if (existe) { existe.cantidad++ } else { carrito.value.push({ ProductoId: p.id, nombre: p.nombre, precio: Number(p.precio), cantidad: 1, categoria: p.categoria }) }
+  if (existe) { existe.cantidad++ }
+  else { carrito.value.push({ ProductoId: p.id, nombre: p.nombre, precio: Number(p.precio), cantidad: 1, categoria: p.categoria }) }
 }
-const decrementar = (i) => { if (carrito.value[i].cantidad > 1) { carrito.value[i].cantidad-- } else { carrito.value.splice(i, 1) } }
+const decrementar = (i) => {
+  if (carrito.value[i].cantidad > 1) { carrito.value[i].cantidad-- }
+  else { carrito.value.splice(i, 1) }
+}
 const confirmar = async () => {
-  error.value = ''; exito.value = ''; loading.value = true
+  errorVenta.value = ''; exito.value = ''; loading.value = true
   try {
-    await apiFetch('/ventas', { method: 'POST', body: JSON.stringify({ lineas: carrito.value.map(i => ({ ProductoId: i.ProductoId, cantidad: i.cantidad })) }) })
-    exito.value = '✓ Venta registrada correctamente'; carrito.value = []; cargar()
-  } catch (e) { error.value = e.message }
-  finally { loading.value = false }
+    await apiFetch('/ventas', {
+      method: 'POST',
+      body: JSON.stringify({ lineas: carrito.value.map(i => ({ ProductoId: i.ProductoId, cantidad: i.cantidad })) }),
+    })
+    exito.value = '✓ Venta registrada correctamente'
+    carrito.value = []
+    cargar()
+  } catch (e) {
+    errorVenta.value = e.message
+  } finally {
+    loading.value = false
+  }
+}
+
+// ── Historial ──
+const ventas         = ref([])
+const loadingHistorial = ref(false)
+const filtroEstado   = ref('todos')
+
+const estados = [
+  { value: 'todos',      label: '📋 Todas'      },
+  { value: 'pendiente',  label: '⏳ Pendientes'  },
+  { value: 'completada', label: '✅ Completadas'  },
+  { value: 'cancelada',  label: '❌ Canceladas'   },
+]
+
+const ventasFiltradas = computed(() =>
+  filtroEstado.value === 'todos'
+    ? ventas.value
+    : ventas.value.filter(v => v.estado === filtroEstado.value)
+)
+
+const cargarHistorial = async () => {
+  loadingHistorial.value = true
+  try {
+    ventas.value = await apiFetch('/ventas')
+  } finally {
+    loadingHistorial.value = false
+  }
+}
+
+const cambiarEstado = async (venta, nuevoEstado) => {
+  try {
+    const actualizada = await apiFetch(`/ventas/${venta.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ estado: nuevoEstado }),
+    })
+    venta.estado = actualizada.estado
+  } catch (e) {
+    alert(e.message)
+  }
+}
+
+const eliminarVenta = async (id) => {
+  if (!confirm('¿Eliminar esta venta? El stock de los productos será restaurado.')) return
+  try {
+    await apiFetch(`/ventas/${id}`, { method: 'DELETE' })
+    ventas.value = ventas.value.filter(v => v.id !== id)
+  } catch (e) {
+    alert(e.message)
+  }
+}
+
+const badgeClass = (estado) => ({
+  pendiente:  'badge-warning',
+  completada: 'badge-success',
+  cancelada:  'badge-danger',
+}[estado] || 'badge-default')
+
+const formatDate = (d) => {
+  if (!d) return '—'
+  const date = new Date(d)
+  return `${String(date.getDate()).padStart(2,'0')}-${String(date.getMonth()+1).padStart(2,'0')}-${date.getFullYear()} ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`
 }
 </script>
 
 <style scoped>
-.ventas-layout { display:grid; grid-template-columns:1fr 360px; gap:24px; }
+/* ── Tabs ── */
+.tabs { display:flex; gap:4px; margin-bottom:0; border-bottom:1px solid var(--border); }
+.tab { padding:10px 20px; background:none; border:none; border-bottom:2px solid transparent; color:var(--text2); font-family:var(--font); font-size:14px; font-weight:500; cursor:pointer; transition:all 0.15s; margin-bottom:-1px; }
+.tab:hover { color:var(--text); }
+.tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+
+/* ── Mostrador ── */
+.ventas-layout { display:grid; grid-template-columns:1fr 360px; gap:24px; margin-top:24px; }
 .catalogo-panel { overflow-y:auto; }
 .page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; }
 .search-input { margin-bottom:16px; }
@@ -127,4 +314,32 @@ const confirmar = async () => {
 .total-monto { color:var(--accent); font-family:var(--mono); }
 .confirmar-btn { width:100%; padding:12px; font-size:15px; }
 .limpiar-btn { width:100%; font-size:13px; }
+
+/* ── Historial ── */
+.filters { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
+.filter-btn { padding:7px 14px; border-radius:20px; border:1px solid var(--border); background:none; color:var(--text2); font-family:var(--font); font-size:13px; cursor:pointer; transition:all 0.15s; }
+.filter-btn:hover { border-color:var(--text3); color:var(--text); }
+.filter-btn.active { background:rgba(232,168,56,0.12); border-color:rgba(232,168,56,0.4); color:var(--accent); }
+.historial-list { display:flex; flex-direction:column; gap:12px; }
+.venta-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px; }
+.venta-header { display:flex; align-items:center; gap:14px; margin-bottom:12px; }
+.venta-id { font-family:var(--mono); font-size:15px; font-weight:700; color:var(--text2); }
+.venta-fecha { font-size:12px; color:var(--text3); flex:1; }
+.venta-total { font-size:16px; font-weight:700; color:var(--accent); font-family:var(--mono); }
+.badge { padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600; text-transform:capitalize; }
+.badge-success { background:rgba(90,171,110,0.15); color:var(--success); }
+.badge-warning { background:rgba(232,168,56,0.15); color:var(--accent); }
+.badge-danger  { background:rgba(232,92,58,0.15); color:var(--danger); }
+.badge-default { background:var(--surface2); color:var(--text2); }
+.lineas { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; padding:12px; background:var(--surface2); border-radius:var(--radius-sm); }
+.linea { display:flex; gap:10px; align-items:center; font-size:13px; }
+.linea-nombre { flex:1; color:var(--text); }
+.linea-qty { color:var(--text2); font-family:var(--mono); }
+.linea-subtotal { color:var(--accent); font-family:var(--mono); font-weight:600; }
+.venta-actions { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.estado-select-wrap { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text2); flex:1; }
+.input-sm { padding:5px 10px; font-size:13px; }
+.btn-sm { padding:6px 12px; font-size:12px; }
+.empty-state { text-align:center; padding:48px; color:var(--text3); }
+.empty-state span { font-size:32px; display:block; margin-bottom:8px; }
 </style>

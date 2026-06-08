@@ -82,7 +82,7 @@
           class="top-item"
         >
           <span class="top-rank">{{ i + 1 }}</span>
-          <span class="top-name">{{ p.nombre }}</span>
+          <span class="top-name">{{ p.Producto?.nombre }}</span>
           <span class="top-qty">{{ p.total }} uds.</span>
         </div>
       </div>
