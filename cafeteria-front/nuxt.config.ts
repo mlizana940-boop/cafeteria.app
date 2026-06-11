@@ -1,15 +1,7 @@
 export default defineNuxtConfig({
-  devServer: {
-    port: 3001
-  },
   runtimeConfig: {
     public: {
-      apiUrl: 'http://localhost:3000/api'
-    }
-  },
-  router: {
-    options: {
-      middleware: ['auth']
+      apiUrl: process.env.NUXT_PUBLIC_API_URL || 'http://localhost:3000/api'
     }
   }
 })
