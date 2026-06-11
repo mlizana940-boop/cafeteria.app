@@ -34,6 +34,9 @@ const logout = () => {
   localStorage.removeItem('token')
   navigateTo('/login')
 }
+definePageMeta({
+  middleware: 'auth'
+})
 </script>
 
 <style>

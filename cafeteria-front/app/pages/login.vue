@@ -31,7 +31,7 @@
         <button class="btn btn-primary w-full" @click="login" :disabled="loading">
           {{ loading ? 'Ingresando...' : 'Entrar →' }}
         </button>
-                <p class="register-link">
+        <p class="register-link">
           ¿No tienes cuenta? <NuxtLink to="/register">Regístrate aquí</NuxtLink>
         </p>
         <p class="register-link" style="margin-top:8px">
@@ -44,18 +44,30 @@
 
 <script setup>
 definePageMeta({ layout: false })
-const email = ref(''); const password = ref(''); const error = ref(''); const loading = ref(false); const showPass = ref(false)
+const email = ref('')
+const password = ref('')
+const error = ref('')
+const loading = ref(false)
+const showPass = ref(false)
 const { apiFetch } = useApi()
+
 const login = async () => {
-  error.value = ''; loading.value = true
+  error.value = ''
+  loading.value = true
   try {
-    const data = await apiFetch('/auth/login', { method: 'POST', body: JSON.stringify({ email: email.value, password: password.value }) })
+    const data = await apiFetch('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: email.value, password: password.value })
+    })
     localStorage.setItem('token', data.token)
     navigateTo('/productos')
-  } catch (e) { error.value = e.message }
-  finally { loading.value = false }
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    loading.value = false
+  }
 }
-
+</script>
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&display=swap');

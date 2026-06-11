@@ -50,12 +50,29 @@
 
 <script setup>
 definePageMeta({ layout: false })
-const nombre = ref(''); const email = ref(''); const password = ref('')
-const error = ref(''); const exito = ref(''); const loading = ref(false); const showPass = ref(false)
+const nombre   = ref('')
+const email    = ref('')
+const password = ref('')
+const error    = ref('')
+const exito    = ref('')
+const loading  = ref(false)
+const showPass = ref(false)
 const { apiFetch } = useApi()
 
+const emailValido = (e) => /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(e)
+
 const register = async () => {
-  error.value = ''; loading.value = true
+  error.value = ''
+  if (!nombre.value.trim()) {
+    error.value = 'El nombre es obligatorio'; return
+  }
+  if (!emailValido(email.value)) {
+    error.value = 'Ingresa un correo válido (ej: tu@correo.com)'; return
+  }
+  if (password.value.length < 6) {
+    error.value = 'La contraseña debe tener al menos 6 caracteres'; return
+  }
+  loading.value = true
   try {
     await apiFetch('/auth/register', {
       method: 'POST',
@@ -63,8 +80,11 @@ const register = async () => {
     })
     exito.value = '✓ Cuenta creada. Redirigiendo...'
     setTimeout(() => navigateTo('/login'), 1500)
-  } catch (e) { error.value = e.message }
-  finally { loading.value = false }
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
