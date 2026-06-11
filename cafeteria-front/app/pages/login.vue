@@ -31,8 +31,11 @@
         <button class="btn btn-primary w-full" @click="login" :disabled="loading">
           {{ loading ? 'Ingresando...' : 'Entrar →' }}
         </button>
-        <p class="register-link">
+                <p class="register-link">
           ¿No tienes cuenta? <NuxtLink to="/register">Regístrate aquí</NuxtLink>
+        </p>
+        <p class="register-link" style="margin-top:8px">
+          <NuxtLink to="/forgot-password">¿Olvidaste tu contraseña?</NuxtLink>
         </p>
       </div>
     </div>
@@ -52,7 +55,7 @@ const login = async () => {
   } catch (e) { error.value = e.message }
   finally { loading.value = false }
 }
-</script>
+
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&display=swap');

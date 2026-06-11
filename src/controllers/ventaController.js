@@ -1,11 +1,30 @@
 const { Venta, LineaVenta, Producto, sequelize } = require('../models');
 
 exports.getAll = async (req, res) => {
-  const ventas = await Venta.findAll({
-    include: [{ model: LineaVenta, include: [Producto] }],
-    order: [['createdAt', 'DESC']],
-  });
-  res.json(ventas);
+  try {
+    const { Op } = require('sequelize');
+    const { desde, hasta } = req.query;
+    const where = {};
+
+    if (desde || hasta) {
+      where.createdAt = {};
+      if (desde) where.createdAt[Op.gte] = new Date(desde);
+      if (hasta) {
+        const fin = new Date(hasta);
+        fin.setHours(23, 59, 59, 999);
+        where.createdAt[Op.lte] = fin;
+      }
+    }
+
+    const ventas = await Venta.findAll({
+      where,
+      include: [{ model: LineaVenta, include: [Producto] }],
+      order: [['createdAt', 'DESC']],
+    });
+    res.json(ventas);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 };
 
 exports.getOne = async (req, res) => {
@@ -19,12 +38,12 @@ exports.getOne = async (req, res) => {
 exports.create = async (req, res) => {
   const t = await sequelize.transaction();
   try {
-    const { lineas } = req.body;
+    const { lineas, metodo_pago = 'efectivo' } = req.body;
 
     if (!lineas || !lineas.length)
       return res.status(400).json({ error: 'Se requiere al menos una línea' });
 
-    const venta = await Venta.create({ total: 0 }, { transaction: t });
+    const venta = await Venta.create({ total: 0, metodo_pago }, { transaction: t });
     let total = 0;
 
     for (const linea of lineas) {

@@ -68,6 +68,14 @@
         </div>
         <div v-if="errorVenta" class="alert alert-error">{{ errorVenta }}</div>
         <div v-if="exito" class="alert alert-success">{{ exito }}</div>
+                <div class="form-group" style="margin-bottom:12px">
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Método de pago</label>
+          <select v-model="metodoPago" class="input" style="padding:10px 14px">
+            <option value="efectivo">💵 Efectivo</option>
+            <option value="tarjeta">💳 Tarjeta</option>
+            <option value="transferencia">📱 Transferencia</option>
+          </select>
+        </div>
         <button class="btn btn-primary confirmar-btn" :disabled="!carrito.length || loading" @click="confirmar">
           {{ loading ? 'Procesando...' : '✓ Confirmar venta' }}
         </button>
@@ -85,6 +93,20 @@
           <p class="page-subtitle">Consulta, edita y elimina ventas registradas</p>
         </div>
         <button class="btn btn-ghost" @click="cargarHistorial">🔄 Actualizar</button>
+      </div>
+
+      <!-- Filtro por fechas -->
+      <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:flex-end">
+        <div>
+          <label style="display:block;font-size:11px;color:var(--text2);margin-bottom:4px">Desde</label>
+          <input v-model="filtroFecha.desde" type="date" class="input" style="padding:8px 12px;font-size:13px" />
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:var(--text2);margin-bottom:4px">Hasta</label>
+          <input v-model="filtroFecha.hasta" type="date" class="input" style="padding:8px 12px;font-size:13px" />
+        </div>
+        <button @click="cargarHistorial" class="btn btn-primary" style="padding:8px 16px;font-size:13px">Filtrar</button>
+        <button @click="limpiarFiltro"   class="btn btn-ghost"   style="padding:8px 16px;font-size:13px">Limpiar</button>
       </div>
 
       <!-- Filtro por estado -->
@@ -149,6 +171,7 @@ const carrito     = ref([])
 const errorVenta  = ref('')
 const exito       = ref('')
 const loading     = ref(false)
+const metodoPago  = ref('efectivo')
 const busqueda    = ref('')
 const filtro      = ref('todos')
 
@@ -190,9 +213,12 @@ const decrementar = (i) => {
 const confirmar = async () => {
   errorVenta.value = ''; exito.value = ''; loading.value = true
   try {
-    await apiFetch('/ventas', {
-      method: 'POST',
-      body: JSON.stringify({ lineas: carrito.value.map(i => ({ ProductoId: i.ProductoId, cantidad: i.cantidad })) }),
+      await apiFetch('/ventas', {
+        method: 'POST',
+        body: JSON.stringify({
+          lineas: carrito.value.map(i => ({ ProductoId: i.ProductoId, cantidad: i.cantidad })),
+          metodo_pago: metodoPago.value,
+        }),
     })
     exito.value = '✓ Venta registrada correctamente'
     carrito.value = []
@@ -205,9 +231,10 @@ const confirmar = async () => {
 }
 
 // ── Historial ──
-const ventas         = ref([])
+const ventas           = ref([])
 const loadingHistorial = ref(false)
-const filtroEstado   = ref('todos')
+const filtroEstado     = ref('todos')
+const filtroFecha      = ref({ desde: '', hasta: '' })
 
 const estados = [
   { value: 'todos',      label: '📋 Todas'      },
@@ -225,10 +252,19 @@ const ventasFiltradas = computed(() =>
 const cargarHistorial = async () => {
   loadingHistorial.value = true
   try {
-    ventas.value = await apiFetch('/ventas')
+    const params = new URLSearchParams()
+    if (filtroFecha.value.desde) params.set('desde', filtroFecha.value.desde)
+    if (filtroFecha.value.hasta) params.set('hasta', filtroFecha.value.hasta)
+    const query = params.toString() ? `?${params}` : ''
+    ventas.value = await apiFetch(`/ventas${query}`)
   } finally {
     loadingHistorial.value = false
   }
+}
+
+const limpiarFiltro = () => {
+  filtroFecha.value = { desde: '', hasta: '' }
+  cargarHistorial()
 }
 
 const cambiarEstado = async (venta, nuevoEstado) => {
