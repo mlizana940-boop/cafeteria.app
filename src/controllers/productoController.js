@@ -30,6 +30,6 @@ exports.update = async (req, res) => {
 exports.remove = async (req, res) => {
   const producto = await Producto.findByPk(req.params.id);
   if (!producto) return res.status(404).json({ error: 'No encontrado' });
-  await producto.update({ activo: false });
-  res.json({ mensaje: 'Producto desactivado' });
+  await producto.destroy();
+  res.json({ mensaje: 'Producto eliminado' });
 };
