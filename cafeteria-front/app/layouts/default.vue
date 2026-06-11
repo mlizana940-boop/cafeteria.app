@@ -15,8 +15,8 @@
           <span>Mostrador</span>
         </NuxtLink>
         <NuxtLink to="/" class="nav-link">
-        <span class="nav-icon">📊</span>
-        <span>Introducción</span>
+          <span class="nav-icon">📊</span>
+          <span>Introducción</span>
         </NuxtLink>
       </div>
       <button class="logout-btn" @click="logout">
@@ -30,12 +30,17 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
+
 const logout = () => {
-  localStorage.removeItem('token')
+  if (import.meta.client) localStorage.removeItem('token')
   navigateTo('/login')
 }
-definePageMeta({
-  middleware: 'auth'
+
+onMounted(() => {
+  if (import.meta.client && !localStorage.getItem('token')) {
+    navigateTo('/login')
+  }
 })
 </script>
 
