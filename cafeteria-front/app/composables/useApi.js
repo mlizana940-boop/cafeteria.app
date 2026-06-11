@@ -3,7 +3,7 @@ export const useApi = () => {
   const baseURL = config.public.apiUrl
 
   const apiFetch = async (path, options = {}) => {
-    const token = localStorage.getItem('token')
+    const token = import.meta.client ? localStorage.getItem('token') : null
 
     const headers = {
       'Content-Type': 'application/json',
@@ -19,7 +19,7 @@ export const useApi = () => {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
-      throw new Error(err.error || `Error ${res.status}`)
+      throw new Error(err.error || err.message || `Error ${res.status}`)
     }
 
     return res.json()
