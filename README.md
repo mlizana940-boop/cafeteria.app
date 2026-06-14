@@ -7,8 +7,6 @@ Proyecto individual. API REST + Frontend para la gestión de ventas de una cafet
 - **API:** `https://TU-APP.railway.app`
 - **Frontend:** `https://TU-FRONT.railway.app`
 
-> ⚠️ Actualiza estas URLs una vez que hagas el deploy en Railway.
-
 ## Stack tecnológico
 
 - **Runtime:** Node.js v20
