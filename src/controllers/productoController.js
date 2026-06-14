@@ -1,41 +1,44 @@
-const service = require('../services/productoService');
+const { Producto } = require('../models');
 
 exports.getAll = async (req, res) => {
-  try {
-    res.json(await service.listar());
-  } catch (e) {
-    res.status(e.status || 500).json({ error: e.msg || e.message });
-  }
+  const productos = await Producto.findAll({ where: { activo: true } });
+  res.json(productos);
 };
 
 exports.getOne = async (req, res) => {
-  try {
-    res.json(await service.obtener(req.params.id));
-  } catch (e) {
-    res.status(e.status || 500).json({ error: e.msg || e.message });
-  }
+  const producto = await Producto.findByPk(req.params.id);
+  if (!producto) return res.status(404).json({ error: 'No encontrado' });
+  res.json(producto);
 };
 
 exports.create = async (req, res) => {
   try {
-    res.status(201).json(await service.crear(req.body));
+    const { nombre, precio, stock } = req.body;
+
+    if (!nombre || precio === undefined || stock === undefined) {
+      return res.status(400).json({
+        error: 'Validación fallida',
+        message: 'Los campos nombre, precio y stock son requeridos'
+      });
+    }
+
+    const producto = await Producto.create(req.body);
+    res.status(201).json(producto);
   } catch (e) {
-    res.status(e.status || 400).json({ error: e.msg || e.message });
+    res.status(400).json({ error: e.message });
   }
 };
 
 exports.update = async (req, res) => {
-  try {
-    res.json(await service.actualizar(req.params.id, req.body));
-  } catch (e) {
-    res.status(e.status || 400).json({ error: e.msg || e.message });
-  }
+  const producto = await Producto.findByPk(req.params.id);
+  if (!producto) return res.status(404).json({ error: 'No encontrado' });
+  await producto.update(req.body);
+  res.json(producto);
 };
 
 exports.remove = async (req, res) => {
-  try {
-    res.json(await service.desactivar(req.params.id));
-  } catch (e) {
-    res.status(e.status || 500).json({ error: e.msg || e.message });
-  }
+  const producto = await Producto.findByPk(req.params.id);
+  if (!producto) return res.status(404).json({ error: 'No encontrado' });
+  await producto.update({ activo: false });
+  res.json({ mensaje: 'Producto desactivado' });
 };
