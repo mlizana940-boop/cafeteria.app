@@ -60,6 +60,7 @@ const login = async () => {
       body: JSON.stringify({ email: email.value, password: password.value })
     })
     localStorage.setItem('token', data.token)
+    localStorage.setItem('user', JSON.stringify(data.user))
     navigateTo('/productos')
   } catch (e) {
     error.value = e.message

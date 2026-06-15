@@ -6,22 +6,29 @@
         <span class="logo-text">Cafetería</span>
       </div>
       <div class="sidebar-links">
-        <NuxtLink to="/productos" class="nav-link">
-          <span class="nav-icon">🧁</span>
-          <span>Productos</span>
+        <NuxtLink to="/" class="nav-link">
+          <span class="nav-icon">📊</span>
+          <span>Introducción</span>
         </NuxtLink>
         <NuxtLink to="/ventas" class="nav-link">
           <span class="nav-icon">🛒</span>
           <span>Mostrador</span>
         </NuxtLink>
-        <NuxtLink to="/" class="nav-link">
-          <span class="nav-icon">📊</span>
-          <span>Introducción</span>
+        <NuxtLink to="/productos" class="nav-link">
+          <span class="nav-icon">🧁</span>
+          <span>Productos</span>
+        </NuxtLink>
+        <NuxtLink v-if="esAdmin" to="/ventas?tab=historial" class="nav-link">
+          <span class="nav-icon">📋</span>
+          <span>Historial</span>
         </NuxtLink>
       </div>
-      <button class="logout-btn" @click="logout">
-        <span>⎋</span> Cerrar sesión
-      </button>
+      <div class="sidebar-footer">
+        <span class="user-rol">{{ userRol }}</span>
+        <button class="logout-btn" @click="logout">
+          <span>⎋</span> Cerrar sesión
+        </button>
+      </div>
     </nav>
     <main class="main-content">
       <slot />
@@ -30,10 +37,23 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, computed } from 'vue'
+
+const esAdmin = computed(() => {
+  if (!import.meta.client) return false
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    return user.rol === 'admin'
+  } catch { return false }
+})
+
+const userRol = computed(() => esAdmin.value ? '👑 Admin' : '👤 Cajero')
 
 const logout = () => {
-  if (import.meta.client) localStorage.removeItem('token')
+  if (import.meta.client) {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+  }
   navigateTo('/login')
 }
 
@@ -131,8 +151,12 @@ body {
   cursor: pointer;
   transition: all 0.15s;
   width: 100%;
+  margin-top: 8px;
 }
 .logout-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+.sidebar-footer { margin-top: auto; }
+.user-rol { display:block; font-size:12px; color:var(--text2); padding:0 12px 4px; }
 
 .main-content { margin-left: 220px; flex: 1; padding: 40px; min-height: 100vh; }
 

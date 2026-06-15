@@ -13,13 +13,12 @@ const getDashboard = async (req, res) => {
     const ingresosTotales = await Venta.sum('total') || 0;
     const ingresosHoy     = await Venta.sum('total', { where: { createdAt: { [Op.gte]: today } } }) || 0;
 
-    // ── Stock bajo: conteo + lista de productos afectados ─────────
-    const productosStockBajo = await Producto.findAll({
-      where: { stock: { [Op.lt]: 10 } },
+    // ── Productos sin stock ───────────────────────────────────────
+    const productosSinStock = await Producto.findAll({
+      where: { stock: 0 },
       attributes: ['id', 'nombre', 'stock'],
-      order: [['stock', 'ASC']]
     });
-    const stockBajo = productosStockBajo.length;
+    const stockBajo = productosSinStock.length;
 
     // ── Últimas 5 ventas ──────────────────────────────────────────
     const ultimasVentas = await Venta.findAll({
@@ -27,8 +26,7 @@ const getDashboard = async (req, res) => {
       limit: 5
     });
 
-    // ── Top 3 más vendidos ────────────────────────────────────────
-    // NOTA: alias corregido a "total" para que coincida con el frontend
+    // ── Top 3 más vendidos (solo productos existentes y activos) ──
     const topProductos = await LineaVenta.findAll({
       attributes: [
         'ProductoId',
@@ -37,13 +35,18 @@ const getDashboard = async (req, res) => {
       group: ['ProductoId', 'Producto.id', 'Producto.nombre'],
       order: [[LineaVenta.sequelize.literal('total'), 'DESC']],
       limit: 3,
-      include: [{ model: Producto, attributes: ['nombre'] }]
+      include: [{
+        model: Producto,
+        attributes: ['nombre'],
+        where: { activo: true },
+        required: true,
+      }]
     });
 
     res.json({
       totalProductos,
       stockBajo,
-      productosStockBajo,   // ← nuevo: lista con nombre y stock actual
+      productosSinStock,
       totalVentas,
       ventasHoy,
       ingresosTotales,

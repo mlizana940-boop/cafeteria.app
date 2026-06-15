@@ -43,11 +43,15 @@ async function submit() {
   msg.value = ''
   error.value = ''
   try {
-    await apiFetch('/auth/forgot-password', {
+    const data = await apiFetch('/auth/forgot-password', {
       method: 'POST',
       body: JSON.stringify({ email: email.value }),
     })
-    msg.value = 'Si el email existe, recibirás el enlace de recuperación.'
+    if (data.token) {
+      navigateTo('/reset-password?token=' + data.token)
+    } else {
+      msg.value = 'Si el email existe, recibirás el enlace de recuperación.'
+    }
   } catch (e) {
     error.value = 'Error al procesar la solicitud.'
   } finally {

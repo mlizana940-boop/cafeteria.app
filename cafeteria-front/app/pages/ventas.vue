@@ -5,7 +5,7 @@
       <button class="tab" :class="{ active: tab === 'mostrador' }" @click="tab = 'mostrador'">
         🛒 Mostrador
       </button>
-      <button class="tab" :class="{ active: tab === 'historial' }" @click="tab = 'historial'; cargarHistorial()">
+      <button v-if="esAdmin" class="tab" :class="{ active: tab === 'historial' }" @click="tab = 'historial'; cargarHistorial()">
         📋 Historial de ventas
       </button>
     </div>
@@ -143,7 +143,7 @@
 
           <!-- Acciones -->
           <div class="venta-actions">
-            <div class="estado-select-wrap">
+            <div v-if="esAdmin" class="estado-select-wrap">
               <label>Estado:</label>
               <select class="input input-sm" :value="v.estado" @change="cambiarEstado(v, $event.target.value)">
                 <option value="pendiente">⏳ Pendiente</option>
@@ -151,7 +151,7 @@
                 <option value="cancelada">❌ Cancelada</option>
               </select>
             </div>
-            <button class="btn btn-danger btn-sm" @click="eliminarVenta(v.id)">🗑 Eliminar</button>
+            <button v-if="esAdmin" class="btn btn-danger btn-sm" @click="eliminarVenta(v.id)">🗑 Eliminar</button>
           </div>
         </div>
       </div>
@@ -161,6 +161,14 @@
 
 <script setup>
 const { apiFetch } = useApi()
+const route = useRoute()
+const esAdmin = computed(() => {
+  if (!import.meta.client) return false
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    return user.rol === 'admin'
+  } catch { return false }
+})
 
 // ── Tab ──
 const tab = ref('mostrador')
@@ -196,6 +204,10 @@ const total = computed(() =>
 
 onMounted(() => {
   if (!localStorage.getItem('token')) navigateTo('/login')
+  if (route.query.tab === 'historial' && esAdmin.value) {
+    tab.value = 'historial'
+    cargarHistorial()
+  }
   cargar()
 })
 

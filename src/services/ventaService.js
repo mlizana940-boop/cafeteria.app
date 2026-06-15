@@ -31,6 +31,11 @@ exports.crear = async ({ lineas, metodo_pago = 'efectivo' }) => {
   if (!lineas || !lineas.length)
     throw { status: 400, msg: 'Se requiere al menos una línea' };
 
+  for (const linea of lineas) {
+    if (linea.cantidad < 0)
+      throw { status: 400, msg: 'La cantidad no puede ser negativa' };
+  }
+
   const t = await sequelize.transaction();
   try {
     const venta = await Venta.create({ total: 0, metodo_pago }, { transaction: t });

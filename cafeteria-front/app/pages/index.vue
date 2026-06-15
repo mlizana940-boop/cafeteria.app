@@ -16,23 +16,19 @@
           <div class="metric-label">Productos</div>
         </div>
 
-        <!-- FIX: Stock bajo ahora muestra la lista de productos afectados -->
-        <div class="metric-card metric-danger" :class="{ expandido: stockExpandido }" @click="stockExpandido = !stockExpandido" style="cursor:pointer">
-          <span class="metric-icon">⚠️</span>
+        <!-- Productos sin stock -->
+        <div class="metric-card metric-danger" :class="{ expandido: sinStockExpandido }" @click="sinStockExpandido = !sinStockExpandido" style="cursor:pointer">
+          <span class="metric-icon">🚫</span>
           <div class="metric-value danger">{{ datos.stockBajo ?? 0 }}</div>
           <div class="metric-label">
-            {{ datos.stockBajo === 0 ? 'Stock OK ✅' : `Prod. con stock bajo` }}
+            {{ datos.stockBajo === 0 ? 'Sin stock OK ✅' : 'Productos sin stock' }}
           </div>
-          <div class="metric-hint">{{ datos.stockBajo > 0 ? 'Toca para ver cuáles ▾' : '' }}</div>
-
-          <!-- Lista expandida de productos con stock bajo -->
+          <div class="metric-hint">{{ datos.stockBajo > 0 ? 'Toca para ver ▾' : '' }}</div>
           <transition name="slide">
-            <ul v-if="stockExpandido && datos.productosStockBajo?.length" class="stock-lista" @click.stop>
-              <li v-for="p in datos.productosStockBajo" :key="p.id">
+            <ul v-if="sinStockExpandido && datos.productosSinStock?.length" class="stock-lista" @click.stop>
+              <li v-for="p in datos.productosSinStock" :key="p.id">
                 <span class="stock-nombre">{{ p.nombre }}</span>
-                <span class="stock-qty" :class="p.stock === 0 ? 'sin-stock' : 'poco-stock'">
-                  {{ p.stock === 0 ? 'Sin stock' : `${p.stock} uds.` }}
-                </span>
+                <span class="stock-qty sin-stock">Sin stock</span>
               </li>
             </ul>
           </transition>
@@ -94,16 +90,9 @@
       <h2 class="section-title">🏆 Más Vendidos</h2>
       <div class="top-list">
         <div v-if="!datos.topProductos?.length" class="empty">Sin datos</div>
-        <div
-          v-for="(p, i) in datos.topProductos"
-          :key="p.ProductoId"
-          class="top-item"
-        >
+        <div v-else class="top-item" v-for="(p, i) in datos.topProductos" :key="p.ProductoId">
           <span class="top-rank">{{ i + 1 }}</span>
-          <!-- FIX: fallback si el producto fue eliminado -->
-          <span class="top-name" :class="{ eliminado: !p.Producto?.nombre }">
-            {{ p.Producto?.nombre ?? '(Producto eliminado)' }}
-          </span>
+          <span class="top-name">{{ p.Producto.nombre }}</span>
           <span class="top-qty">{{ p.total }} uds.</span>
         </div>
       </div>
@@ -123,7 +112,7 @@ const { apiFetch } = useApi()
 const route = useRoute()
 const datos = ref({})
 const cargando = ref(true)
-const stockExpandido = ref(false)
+const sinStockExpandido = ref(false)
 
 const cargarDatos = async () => {
   try {

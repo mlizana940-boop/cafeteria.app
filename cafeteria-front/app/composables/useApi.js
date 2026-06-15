@@ -19,7 +19,15 @@ export const useApi = () => {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
-      throw new Error(err.message || `Error ${res.status}`)
+      const msg = err.error || err.message || `Error ${res.status}`
+
+      if (res.status === 401 && !path.includes('/auth/login') && !path.includes('/auth/register')) {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        if (import.meta.client) navigateTo('/login')
+      }
+
+      throw new Error(`${res.status} "${msg}"`)
     }
 
     return res.json()

@@ -5,7 +5,7 @@
         <h1 class="page-title">Productos</h1>
         <p class="page-subtitle">Gestiona el catálogo de la cafetería</p>
       </div>
-      <button class="btn btn-primary" @click="abrirNuevo">
+      <button v-if="esAdmin" class="btn btn-primary" @click="abrirNuevo">
         {{ mostrarForm ? '✕ Cancelar' : '+ Nuevo producto' }}
       </button>
     </div>
@@ -20,11 +20,11 @@
         </div>
         <div class="form-group">
           <label>Precio ($)</label>
-          <input v-model="form.precio" class="input" type="number" placeholder="0" step="0.01" />
-        </div>
-        <div class="form-group">
-          <label>Stock</label>
-          <input v-model="form.stock" class="input" type="number" placeholder="0" />
+            <input v-model="form.precio" class="input" type="number" placeholder="0" step="0.01" min="0" />
+          </div>
+          <div class="form-group">
+            <label>Stock</label>
+            <input v-model="form.stock" class="input" type="number" placeholder="0" min="0" />
         </div>
         <div class="form-group">
           <label>Categoría</label>
@@ -79,8 +79,8 @@
           </div>
         </div>
         <div class="card-actions">
-          <button class="btn btn-secondary btn-sm" @click="abrirEditar(p)">✏️ Editar</button>
-          <button class="btn btn-danger btn-sm" @click="eliminar(p.id)">🗑 Eliminar</button>
+          <button v-if="esAdmin" class="btn btn-secondary btn-sm" @click="abrirEditar(p)">✏️ Editar</button>
+          <button v-if="esAdmin" class="btn btn-danger btn-sm" @click="eliminar(p.id)">🗑 Eliminar</button>
         </div>
       </div>
       <div v-if="productosFiltrados.length === 0" class="empty-state">
@@ -92,6 +92,13 @@
 
 <script setup>
 const { apiFetch } = useApi()
+const esAdmin = computed(() => {
+  if (!import.meta.client) return false
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    return user.rol === 'admin'
+  } catch { return false }
+})
 const productos  = ref([])
 const error      = ref('')
 const mostrarForm = ref(false)
@@ -158,6 +165,19 @@ const cerrarForm = () => {
 
 const guardar = async () => {
   error.value = ''
+
+  const stock = Number(form.stock)
+  const precio = Number(form.precio)
+
+  if (stock < 0) {
+    error.value = 'El stock no puede ser negativo'
+    return
+  }
+  if (precio < 0) {
+    error.value = 'El precio no puede ser negativo'
+    return
+  }
+
   try {
     if (editando.value) {
       await apiFetch(`/productos/${editando.value.id}`, {

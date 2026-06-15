@@ -12,8 +12,9 @@ exports.register = async (req, res) => {
     if (existe)
       return res.status(409).json({ error: 'El email ya está registrado' });
     const password_hash = await bcrypt.hash(password, 10);
-    const user = await User.create({ nombre, email, password_hash });
-    res.status(201).json({ id: user.id, nombre: user.nombre, email: user.email });
+    const rol = req.body.adminSecret && req.body.adminSecret === process.env.ADMIN_SECRET ? 'admin' : 'cajero';
+    const user = await User.create({ nombre, email, password_hash, rol });
+    res.status(201).json({ id: user.id, nombre: user.nombre, email: user.email, rol: user.rol });
   } catch (e) {
     res.status(400).json({ error: e.message });
   }
@@ -29,11 +30,11 @@ exports.login = async (req, res) => {
     if (!ok)
       return res.status(401).json({ error: 'Credenciales inválidas' });
     const token = jwt.sign(
-      { id: user.id, email: user.email },
+      { id: user.id, email: user.email, rol: user.rol },
       process.env.JWT_SECRET,
       { expiresIn: '8h' }
     );
-    res.json({ token, user: { id: user.id, nombre: user.nombre, email: user.email } });
+    res.json({ token, user: { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol } });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -49,6 +50,9 @@ exports.forgotPassword = async (req, res) => {
     const expiresAt = new Date(Date.now() + 1000 * 60 * 60);
     await PasswordResetToken.destroy({ where: { userId: user.id } });
     await PasswordResetToken.create({ userId: user.id, token, expiresAt });
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[DEV] Token de recuperación para ${email}: ${token}`);
+    }
     res.status(200).json({ message: 'Token generado', token });
   } catch (e) {
     res.status(500).json({ error: e.message });
