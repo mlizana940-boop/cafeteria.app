@@ -1,15 +1,10 @@
 export default defineNuxtConfig({
   devServer: {
-    port: 3001
+    port: 3000  // ← frontend siempre en 3000
   },
   runtimeConfig: {
     public: {
-      apiUrl: 'http://localhost:3000/api'
-    }
-  },
-  router: {
-    options: {
-      middleware: ['auth']
+      apiUrl: process.env.NUXT_PUBLIC_API_URL || 'http://localhost:3001/api'  // ← backend en 3001
     }
   }
 })
