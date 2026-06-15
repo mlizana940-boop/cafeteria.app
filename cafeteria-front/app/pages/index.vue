@@ -15,11 +15,29 @@
           <div class="metric-value">{{ datos.totalProductos ?? 0 }}</div>
           <div class="metric-label">Productos</div>
         </div>
-        <div class="metric-card metric-danger">
+
+        <!-- FIX: Stock bajo ahora muestra la lista de productos afectados -->
+        <div class="metric-card metric-danger" :class="{ expandido: stockExpandido }" @click="stockExpandido = !stockExpandido" style="cursor:pointer">
           <span class="metric-icon">⚠️</span>
           <div class="metric-value danger">{{ datos.stockBajo ?? 0 }}</div>
-          <div class="metric-label">Stock bajo (&lt;10)</div>
+          <div class="metric-label">
+            {{ datos.stockBajo === 0 ? 'Stock OK ✅' : `Prod. con stock bajo` }}
+          </div>
+          <div class="metric-hint">{{ datos.stockBajo > 0 ? 'Toca para ver cuáles ▾' : '' }}</div>
+
+          <!-- Lista expandida de productos con stock bajo -->
+          <transition name="slide">
+            <ul v-if="stockExpandido && datos.productosStockBajo?.length" class="stock-lista" @click.stop>
+              <li v-for="p in datos.productosStockBajo" :key="p.id">
+                <span class="stock-nombre">{{ p.nombre }}</span>
+                <span class="stock-qty" :class="p.stock === 0 ? 'sin-stock' : 'poco-stock'">
+                  {{ p.stock === 0 ? 'Sin stock' : `${p.stock} uds.` }}
+                </span>
+              </li>
+            </ul>
+          </transition>
         </div>
+
         <div class="metric-card">
           <span class="metric-icon">🛒</span>
           <div class="metric-value">{{ datos.totalVentas ?? 0 }}</div>
@@ -82,7 +100,10 @@
           class="top-item"
         >
           <span class="top-rank">{{ i + 1 }}</span>
-          <span class="top-name">{{ p.Producto?.nombre }}</span>
+          <!-- FIX: fallback si el producto fue eliminado -->
+          <span class="top-name" :class="{ eliminado: !p.Producto?.nombre }">
+            {{ p.Producto?.nombre ?? '(Producto eliminado)' }}
+          </span>
           <span class="top-qty">{{ p.total }} uds.</span>
         </div>
       </div>
@@ -102,6 +123,7 @@ const { apiFetch } = useApi()
 const route = useRoute()
 const datos = ref({})
 const cargando = ref(true)
+const stockExpandido = ref(false)
 
 const cargarDatos = async () => {
   try {
@@ -113,20 +135,19 @@ const cargarDatos = async () => {
   }
 }
 
-// Carga inicial
-onMounted(cargarDatos)
+let intervalo = null
+onMounted(() => {
+  cargarDatos()
+  intervalo = setInterval(cargarDatos, 30000)
+})
+onUnmounted(() => {
+  if (intervalo) clearInterval(intervalo)
+})
 
-// Recarga cada vez que navegas de vuelta a esta página
 watch(() => route.path, (path) => {
   if (path === '/') cargarDatos()
 })
 
-// Refresco automático cada 30 segundos
-let intervalo
-onMounted(() => { intervalo = setInterval(cargarDatos, 30000) })
-onUnmounted(() => clearInterval(intervalo))
-
-// Helpers
 const formatNum = (n) => Number(n ?? 0).toLocaleString('es-CL')
 const formatDate = (d) => {
   if (!d) return '—'
@@ -162,12 +183,41 @@ const formatDate = (d) => {
 }
 .metric-card:hover { border-color: var(--text3); }
 .metric-card.metric-danger { border-color: rgba(232,92,58,0.3); }
+.metric-card.metric-danger:hover { border-color: rgba(232,92,58,0.6); }
 
 .metric-icon { font-size: 28px; display: block; margin-bottom: 10px; }
 .metric-value { font-size: 32px; font-weight: 700; color: var(--text); line-height: 1; margin-bottom: 6px; }
 .metric-value.accent { color: var(--accent); }
 .metric-value.danger { color: var(--danger); }
 .metric-label { font-size: 13px; color: var(--text2); }
+.metric-hint { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+/* Lista desplegable de stock bajo */
+.stock-lista {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0 0;
+  text-align: left;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+.stock-lista li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.stock-lista li:last-child { border-bottom: none; }
+.stock-nombre { color: var(--text); font-weight: 500; }
+.poco-stock { color: var(--accent); font-weight: 700; font-family: var(--mono); }
+.sin-stock { color: var(--danger); font-weight: 700; font-family: var(--mono); }
+
+/* Animación slide */
+.slide-enter-active, .slide-leave-active { transition: max-height 0.3s ease, opacity 0.3s ease; overflow: hidden; }
+.slide-enter-from, .slide-leave-to { max-height: 0; opacity: 0; }
+.slide-enter-to, .slide-leave-from { max-height: 300px; opacity: 1; }
 
 .section-title {
   font-size: 18px;
@@ -231,6 +281,7 @@ const formatDate = (d) => {
 }
 .top-rank { font-size: 18px; font-weight: 700; color: var(--accent); width: 24px; }
 .top-name { flex: 1; font-size: 14px; font-weight: 500; }
+.top-name.eliminado { color: var(--text3); font-style: italic; font-weight: 400; }
 .top-qty { font-size: 13px; color: var(--text2); font-family: var(--mono); }
 
 .quick-links { display: flex; gap: 12px; flex-wrap: wrap; }

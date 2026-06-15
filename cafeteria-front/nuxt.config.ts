@@ -1,4 +1,5 @@
 export default defineNuxtConfig({
+  ssr: false,  // ← FIX: app SPA, usa localStorage para auth
   devServer: {
     port: 3000  // ← frontend siempre en 3000
   },
