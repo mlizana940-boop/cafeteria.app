@@ -34,8 +34,11 @@ exports.updateEstado = async (req, res) => {
 
 exports.remove = async (req, res) => {
   try {
-    res.json(await service.eliminar(req.params.id));
+    const producto = await Producto.findByPk(req.params.id);
+    if (!producto) return res.status(404).json({ error: 'No encontrado' });
+    await producto.update({ activo: false });
+    res.json({ mensaje: 'Producto desactivado correctamente' });
   } catch (e) {
-    res.status(e.status || 500).json({ error: e.msg || e.message });
+    res.status(500).json({ error: e.message });
   }
 };
